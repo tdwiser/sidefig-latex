@@ -1,0 +1,300 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  based on INSBOX --- macros for inserting pictures into paragraphs  %
+%      by Micha\l{} Gulczy\'nski, Szczecin, Jan 1996 / Feb 1998       %
+%                    mgulcz@we.tuniv.szczecin.pl                      %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\NeedsTeXFormat{LaTeX2e}[1994/06/01]
+
+\ProvidesPackage{sidefig}[2018/02/18 v0.1 For wrapping text around figures and other boxes placed to one side or the other. Designed to wrap around listed environments.]
+
+\ProcessOptions\relax
+
+%%%%% BEGIN insbox internal code
+
+\newdimen\@InsertBoxMargin
+\@InsertBoxMargin = 2mm
+%
+%  definition of \ParShape, an inproved version of plain \parshape
+%
+\newcount\@numlines    % sum: m_1+...+m_n
+\newcount\@linesleft   % counter used when reading lines of \ParShape
+\def\ParShape{%
+    \@numlines = 0
+    \def\@parshapedata{ }% here we'll collect data for plain \parshape
+    \afterassignment\@beginParShape
+    \@linesleft
+}%
+\def\@beginParShape{%
+    \ifnum \@linesleft = 0
+      \let\@whatnext = \@endParShape
+    \else
+      \let\@whatnext = \@readnextline
+    \fi
+    \@whatnext
+}%
+\def\@endParShape{%
+    \global\parshape = \@numlines \@parshapedata
+}%
+\def\@readnextline#1 #2 #3 {% #1 #2 #3 are: m_i, leftskip_i, rightskip_i
+    \ifnum #1 > 0
+      \bgroup  % I want to keep changes of \dimen0 and \count0 local
+        \dimen0 = \hsize
+        \advance \dimen0 by -#2  % \parshape requires left skip and
+        \advance \dimen0 by -#3  % _length_of_line_ (not right skip!)
+        \count0 = 0
+        \loop
+          \global\edef\@parshapedata{%
+            \@parshapedata    % add to \@parshapedata:
+            #2                % left skip
+            \space            % a space
+            \the\dimen0       % length of line
+            \space            % another space
+          }%
+          \advance \count0 by 1
+          \ifnum \count0 < #1
+        \repeat
+      \egroup
+      \advance \@numlines by #1
+    \fi
+    \advance \@linesleft by -1
+    \@beginParShape
+}%
+%
+%  \InsertBoxC, \InsertBoxL, \InsertBoxR
+%
+\newbox\@boxcontent     % box containing the picture to be inserted
+\newcount\@numnormal    % number of leading lines to typeset normally
+\newdimen\@framewidth   % width of the frame
+\newdimen\@wherebottom  % position of frame's bottom
+\newif\if@byframe       % true if we are just beside the frame
+\@byframefalse
+%
+
+%%%%% END insbox internal code
+
+\let\@everypar\everypar % save to restore later
+
+%%%%% code to be run at the beginning of each par (using everypar) to set the parshape.
+%%%%%   includes checks for being inside a list, and combines the parshapes appropriately.
+\def\@setupsidepar#1{%
+    % are we already below the bottom of the box?
+    \ifdim \pagetotal < \@wherebottom
+      % no...
+      \bgroup  % to keep some changes local
+        % let's calculate parameters for \ParShape
+        \dimen0 = \@wherebottom
+        \advance \dimen0 by -\pagetotal
+        \divide \dimen0 by \baselineskip
+        \count1 = \dimen0
+        \advance \count1 by 1
+        \advance \count1 by -\@numnormal
+		\ifnum \@listdepth >0 \dimen1 = \@totalleftmargin \else \dimen1 = 0cm \fi
+        \ifnum #1 = 1
+          \ParShape = 3
+                      {\the\@numnormal}   {\the\dimen1}   0cm
+                      {\the\count1}       {\the\dimen1}  {\the\@framewidth}
+                      1                   {\the\dimen1}   0cm
+        \else
+		\dimen2 = \dimen1 \advance \dimen2 \@framewidth 
+          \ParShape = 3
+                      {\the\@numnormal}   {\the\dimen1}        0cm
+                      {\the\count1}       {\the\dimen2}        0cm
+                      1                   {\the\dimen1}        0cm
+        \fi
+      \egroup
+    \else
+	% yes!
+	  \@restore@    % it's time to end everything
+    \fi
+}
+
+%%%%% rewritten \@@InsertBox from insbox to use our helper function
+%%%%%   defs \everypar to make sure that it still affects lists
+\def\@@InsertBox#1#2#3{%
+  \MoveBelowBox
+  \global\@byframetrue
+  % \@wherebottom = \pagetotal + (\@numnormal * \baselineskip) +
+  %                 (height of \@boxcontent) + (2 * \@InsertBoxMargin)
+  \bgroup
+  \dimen0 = \baselineskip
+  \multiply \dimen0 by \@numnormal %%% \@numnormal = 0, this feature is not list compatible
+  \advance \dimen0 by 2\@InsertBoxMargin
+  \advance \dimen0 by \ht\@boxcontent
+  \advance \dimen0 by \pagetotal
+  % I have no idea why, but \InsertBox called at the top of a page
+  % calculates space for the box one line too big
+  \ifdim \pagetotal = 0cm
+    \advance \dimen0 by -\baselineskip  % ^ reduction
+  \fi
+  % add the correction
+  \advance \dimen0 by #1\baselineskip
+  \ifnum \@listdepth >0
+  	\if@newlist
+		\advance\dimen0 by \partopsep
+		\advance\dimen0 by \topsep
+	\else
+		\advance\dimen0 by \itemsep
+	\fi
+  \fi
+  % \dimen1 = (width of \@boxcontent} + \@InsertboxMargin
+  \dimen1 = \wd\@boxcontent
+  \advance \dimen1 by \@InsertBoxMargin
+  \global\@wherebottom=\dimen0
+  \global\@framewidth=\dimen1
+  \egroup
+  %
+  \bgroup  % to keep changes of \dimen0 local
+    % check if the box fits in the page
+    \ifdim \pagetotal = 0cm
+      \dimen0 = \vsize
+    \else
+      \dimen0 = \pagegoal
+    \fi
+    \ifdim \@wherebottom > \dimen0
+      % print a warning message ...
+      \immediate\write16{+--------------------------------------------------------------+}%
+      \immediate\write16{| The box will not fit in the page. Please, re-edit your text. |}%
+      \immediate\write16{+--------------------------------------------------------------+}%
+      % ... and mark this place in document with a black box
+      \vrule width \overfullrule
+    \fi
+  \egroup
+  \prevgraf = 0
+  % insert the box in the left (if #2 = 0) or in the right (if #2 = 1)
+  \vbox to 0cm{%
+    \dimen0 = \baselineskip
+    \multiply \dimen0 by \@numnormal
+    \advance \dimen0 by -\baselineskip
+    \setbox0 = \hbox{y}%
+    % \vskip \dp0
+    \vskip \dimen0
+    \vskip \@InsertBoxMargin
+    \ifnum \@listdepth >0
+    	\if@newlist
+	  		\vskip \partopsep
+			\vskip \topsep
+	  	\else
+	  		\vskip \itemsep
+	  	\fi
+    \fi
+	\ifnum #2 = 1
+      \vtop{\noindent \hbox to \linewidth{\hss \box\@boxcontent}}%
+    \else
+	  % \ifnum \@listdepth >0
+% 	  \vtop{\noindent \hskip -\@totalleftmargin \box\@boxcontent}
+% 	  \else
+      \vtop{\noindent \box\@boxcontent}%
+	  % \fi
+    \fi
+    \vss
+  }%
+  % I have no idea why, but this is really necessary
+  \vglue -\parskip
+  \vskip -\baselineskip
+  \ifnum \@listdepth >0 \if@newlist \else
+  	\vglue -\parsep
+  \fi \fi
+  % each following paragraph needs to be formatted properly
+  \gdef\everypar##1{\@everypar{##1\@setupsidepar{#2}}} %%%% this is the magic that keeps the parshape
+  \everypar{}										   %%%%  from being trashed by \list
+  %
+  % this breaks			  % this definition isn't very necessary --- just in case the paragraph
+  % lists - not			  % following \InsertBoxL or \InsertBoxR has fewer lines that the
+  % used here			  % first argument of the macro
+  % \@setpar{%
+  %     \endgraf
+  %     \global\advance \@numnormal by -\prevgraf
+  %     \ifnum \@numnormal < 0
+  %       \global\@numnormal = 0
+  %     \fi
+  %     \prevgraf = 0
+  % 	  % \everypar = {\@setupsidepar{#2}}
+  % }%
+}%
+
+\def\@restore@{%
+    \global\@wherebottom = 0cm
+    \global\@byframefalse
+	\global\let\everypar\@everypar % restore the old everypar command
+    \global\everypar = {}%
+    % \global\let \par = \endgraf %again, can't use with lists
+	\ifnum \@listdepth >0
+	\global\parshape = 1 \@totalleftmargin \linewidth % fix up the margins if we're in a list
+	\else
+    \global\parshape = 1 0cm \hsize
+	\fi
+}
+
+\let\@origitem\item
+\def\item{\if@byframe\else\@restore@\fi\@origitem} % if a nested list ends at the same time as the bottom of a box, it will hve the wrong indent. so tidy things up (this is probably overkill)
+
+% \def\InsertBoxC#1{% doesn't interact well with lists
+%   \leavevmode
+%   \vadjust{
+%     \vskip \@InsertBoxMargin
+%     \hbox to \hsize{\hss#1\hss}
+%     \vskip \@InsertBoxMargin
+%   }
+% }%
+\def\@InsertBoxL#1{%
+  \@numnormal = 0
+  \setbox\@boxcontent = \hbox{#1}%
+  \let\@side = 0
+  \futurelet \@optionalparameter \@InsertBox
+}
+\def\@InsertBoxR#1{%
+  \@numnormal = 0
+  \setbox\@boxcontent = \hbox{#1}%
+  \let\@side = 1
+  \futurelet \@optionalparameter \@InsertBox
+}%
+\def\@InsertBox{%
+  \ifx \@optionalparameter [
+    \let\@whatnext = \@@InsertBoxCorrection
+  \else
+    \let\@whatnext = \@@InsertBoxNoCorrection
+  \fi
+  \@whatnext
+}%
+\def\@@InsertBoxCorrection[#1]{%
+  \ifx \@side 0
+    \@@InsertBox{#1}{0}{{\the\@framewidth} 0cm}%
+  \else
+    \@@InsertBox{#1}{1}{0cm {\the\@framewidth}}%
+  \fi
+}%
+\def\@@InsertBoxNoCorrection{%
+  \@@InsertBoxCorrection[0]%
+}%
+
+%%%% public facing commands
+
+\def\MoveBelowBox{%
+  % \par%
+  \if@byframe
+    \global\advance \@wherebottom by -\pagetotal
+	\ifdim \@wherebottom > 0cm
+      \vskip \@wherebottom
+    \fi
+    \@restore@
+    \par % move par to end so that it uses the restored parshape and sets new pagetotal
+  \fi
+}%
+
+\def\@sidefig#1#2{\csname @InsertBox#1\endcsname{#2}}
+\def\@sidefigcaption[#1]#2#3{%
+\bgroup
+\setbox0\hbox{#3}
+\setbox1\hbox{\vbox{\leavevmode\parshape 1 0pt \wd0 \noindent \sidecapstyle #1}}
+\@sidefig{#2}{\vbox{\box0 \vskip \sidecapskip \box1}}
+\egroup
+}
+\def\sidefig{\@ifnextchar[{\@sidefigcaption}{\@sidefig}}
+
+\def\sidecapstyle{\centering\small\it}
+\newlength{\sidecapskip}
+\setlength{\sidecapskip}{2pt}
+
+\endinput

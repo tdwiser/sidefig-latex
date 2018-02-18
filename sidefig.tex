@@ -1,0 +1,71 @@
+\documentclass{article}
+
+\usepackage{sidefig}
+
+\begin{document}
+	
+	\title{\texttt{sidefig} Package Example}
+	\author{Tim Wiser}
+	\date{\today}
+	
+	\maketitle
+	
+	\newsavebox\samplebox
+	\savebox{\samplebox}{\fbox{\vbox{\vskip 4ex \hbox{\hskip 8ex \it figure \hskip 8ex} \vskip 4ex}}}
+	
+	\sidefig{L}{\usebox{\samplebox}}
+	\noindent Wrapping text around a figure (or, more generally, any box-shaped region) is a tricky subject in \LaTeX.
+	Plain \TeX\ has a powerful command, \verb|\parshape|, which directs \TeX\ to flow a paragraph within a defined region, with the geometry defined line-by-line.
+	
+	Various packages (e.g.~\texttt{wrapfig}) exist to facilitate this process for \LaTeX\ users.
+	However, \verb|\parshape| (and another powerful command, \verb|\everypar|, which allows wrapping across multiple paragraphs) are overwritten by \LaTeX\ \verb|list| environments, including \verb|itemize| and \verb|enumerate|.
+	This causes typical approaches to fail when used near \verb|list|s.
+	
+	\texttt{sidefig} is a package which attempts to allow wrapping text around rectangular regions even in the presence of \texttt{list}s.
+	
+	\sidefig{R}{\usebox{\samplebox}}
+	Here are some features of \texttt{sidefig}, which you can see demonstrated below:
+	\begin{itemize}
+	
+		\item Text wrapping continues to work even if you start a list.
+		For example, this line will break a little bit earlier to make room for the figure at right.
+		
+		\item Sublists are also supported:
+		
+		\begin{enumerate}
+			\item like so.
+			
+			
+			\sidefig{L}{\usebox{\samplebox}}
+			\item If you add a \verb|\sidefig| in a list, the package tries hard to make things look right even across multiple levels.
+		\end{enumerate}
+		
+		\item Now we're back in the outer list and the indent is hopefully right.
+		
+		\sidefig[Fig.~1: A caption describing the figure above.]{R}{\usebox{\samplebox}}
+		\item Captions are also possible using an optional parameter to \verb|\sidefig|.
+		
+		\item Usage:
+		
+		\verb|\sidefig[|\emph{(optional caption)}\verb|]{L|\emph{ or }\verb|R}{|\emph{(content)}\verb|}| right before any paragraph or \verb|\item|.
+	\end{itemize}
+	
+	\subsection*{Additional Features}
+	
+	The style of the caption can be controlled by redefining \verb|\sidecapstyle|.
+	The default is \verb|\def\sidecapstyle{\centering\small\it}|.
+	The caption can also be passed as an option to \verb|\sidecapstyle| if you like.
+	
+	The spacing between the content and the caption can be controlled with \verb|\setlength{\sidecapskip}{|\emph{(length)}\verb|}|, default \verb|2pt|.
+	
+	If you don't want to be next to the \verb|\sidefig| any more, use \verb|\MoveBelowBox|.
+	This command is called automatically if you add a \verb|\sidefig| that would otherwise overlap a previous one.
+	
+	\subsection*{Acknowledgements}
+	
+	This code is heavily based off of the Plain \TeX\ package \verb|insbox| by Micha\l{} Gulczy\'nski, available at \texttt{https://ctan.org/pkg/insbox}.
+	
+	Not all features of \verb|insbox| are available due to poor interactions with \verb|list|s.
+	Many things have been wrapped-around or otherwise rearranged to accommodate \verb|list|s, but the core functionality is due to \verb|insbox|.
+	
+\end{document}
