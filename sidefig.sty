@@ -292,7 +292,7 @@
 \def\@sidefigcaption[#1]#2#3{%
 \bgroup
 \setbox0\hbox{#3}
-\setbox1\hbox{\vbox{\leavevmode\parshape 1 0pt \wd0 \noindent \sidecapstyle #1}}
+\setbox1\hbox{\vbox{\leavevmode\parshape 1 0pt \wd0 \noindent {\sidecapstyle{#1}\par}}}
 \@sidefig{#2}{\vbox{\box0 \vskip \sidecapskip \box1}}
 \egroup
 }
