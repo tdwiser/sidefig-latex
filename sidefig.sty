@@ -162,6 +162,11 @@
     \fi
   \egroup
   \prevgraf = 0
+  \ifnum \@listdepth >0
+  	\if@newlist\else
+		\hskip -\@totalleftmargin
+	\fi
+  \fi
   % insert the box in the left (if #2 = 0) or in the right (if #2 = 1)
   \vbox to 0cm{%
     \dimen0 = \baselineskip
@@ -180,7 +185,7 @@
 	  	\fi
     \fi
 	\ifnum #2 = 1
-      \vtop{\noindent \hbox to \linewidth{\hss \box\@boxcontent}}%
+      \vtop{\noindent \hbox to \hsize{\hss \box\@boxcontent}}%
     \else
 	  % \ifnum \@listdepth >0
 % 	  \vtop{\noindent \hskip -\@totalleftmargin \box\@boxcontent}
