@@ -1,6 +1,11 @@
 \documentclass{article}
+% \usepackage{lua-visual-debug}
+% \usepackage{physhandout}
 
 \usepackage{sidefig}
+
+\usepackage{url}
+% \setlength{\parskip}{18ex}
 
 \begin{document}
 	
@@ -9,12 +14,13 @@
 	\date{\today}
 	
 	\maketitle
-	
+
 	\newsavebox\samplebox
 	\savebox{\samplebox}{\fbox{\vbox{\vskip 4ex \hbox{\hskip 8ex \it figure \hskip 8ex} \vskip 4ex}}}
-	
+			
 	\sidefig{L}{\usebox{\samplebox}}
-	\noindent Wrapping text around a figure (or, more generally, any box-shaped region) is a tricky subject in \LaTeX.
+	
+	Wrapping text around a figure (or, more generally, any box-shaped region) is a tricky subject in \LaTeX.
 	Plain \TeX\ has a powerful command, \verb|\parshape|, which directs \TeX\ to flow a paragraph within a defined region, with the geometry defined line-by-line.
 	
 	Various packages (e.g.~\texttt{wrapfig}) exist to facilitate this process for \LaTeX\ users.
@@ -22,48 +28,80 @@
 	This causes typical approaches to fail when used near \verb|list|s.
 	
 	\texttt{sidefig} is a package which attempts to allow wrapping text around rectangular regions even in the presence of \texttt{list}s.
-	
-	\sidefig{R}{\usebox{\samplebox}}
+
+
 	Here are some features of \texttt{sidefig}, which you can see demonstrated below:
 	\begin{itemize}
-	
+
+		\sidefig{R}{\usebox{\samplebox}}
 		\item Text wrapping continues to work even if you start a list.
 		For example, this line will break a little bit earlier to make room for the figure at right.
 		
 		\item Sublists are also supported:
 		
+
 		\begin{enumerate}
+			
 			\item like so.
-			
-			
+
 			\sidefig{L}{\usebox{\samplebox}}
+			
 			\item If you add a \verb|\sidefig| in a list, the package tries hard to make things look right even across multiple levels.
 		\end{enumerate}
 		
 		\item Now we're back in the outer list and the indent is hopefully right.
-		
+			
 		\sidefig[Fig.~1: A caption describing the figure above.]{R}{\usebox{\samplebox}}
 		\item Captions are also possible using an optional parameter to \verb|\sidefig|.
 		
 		\item Usage:
 		
-		\verb|\sidefig[|\emph{(optional caption)}\verb|]{L|\emph{ or }\verb|R}{|\emph{(content)}\verb|}| right before any paragraph or \verb|\item|.
+		\verb|\sidefig[|\emph{(caption)}\verb|]{L|\emph{ or }\verb|R}{|\emph{(content)}\verb|}| right before any paragraph or \verb|\item|.
 	\end{itemize}
 	
-	\subsection*{Additional Features}
+	\pagebreak %%% this is necessary to appease the coming sidefig, which would otherwise be typeset across a page boundary
 	
+	\renewcommand{\sidecapstyle}[1]{\uppercase{#1}}
+	
+	\section*{Additional Features}
+
+	\sidefig[Caption with redefined style]{R}{\usebox{\samplebox}}
 	The style of the caption can be controlled by redefining \verb|\sidecapstyle|.
-	The default is \verb|\def\sidecapstyle{\centering\small\it}|.
-	The caption can also be passed as an option to \verb|\sidecapstyle| if you like.
+	The default is
+	\begin{quote}
+		\verb|\def\sidecapstyle{\centering\small\it}|.
+	\end{quote}
+	\verb|\sidecapstyle| can also take an option, if you like, as in
+	\begin{quote}
+		\verb|\renewcommand{\sidecapstyle}[1]{\uppercase{#1}}|.
+	\end{quote}
 	
-	The spacing between the content and the caption can be controlled with \verb|\setlength{\sidecapskip}{|\emph{(length)}\verb|}|, default \verb|2pt|.
+	
+	The spacing between the content and the caption can be controlled with
+	\begin{quote}
+		\verb|\setlength{\sidecapskip}{|\emph{(length)}\verb|}|,
+	\end{quote}
+	default \verb|2pt|.
 	
 	If you don't want to be next to the \verb|\sidefig| any more, use \verb|\MoveBelowBox|.
 	This command is called automatically if you add a \verb|\sidefig| that would otherwise overlap a previous one.
 	
+	\subsection*{Known Issues}
+	
+	\begin{itemize}
+		\item Various issues around page breaks.
+		Current behavior is to raise an error if the sidefig would go below the ostensible end of the page.
+		If the box overflows by just a little, \TeX\ may put it there anyway, and everything is fine (despite the error); if it instead moves the box to the next page, the word wrap fails.
+		Since the behavior is unpredictable, an error is raised.
+		
+		This needs to be made much more robust.
+		
+		\item There also seems to be some mysterious errors involving page breaks, lists, and \verb|\prevdepth|, but they sometimes vanish after solving the page overflow issue.
+	\end{itemize}
+	
 	\subsection*{Acknowledgements}
 	
-	This code is heavily based off of the Plain \TeX\ package \verb|insbox| by Micha\l{} Gulczy\'nski, available at \texttt{https://ctan.org/pkg/insbox}.
+	This code is heavily based off of the Plain \TeX\ package \verb|insbox| by Micha\l{} Gulczy\'nski, available at \url{https://ctan.org/pkg/insbox}.
 	
 	Not all features of \verb|insbox| are available due to poor interactions with \verb|list|s.
 	Many things have been wrapped-around or otherwise rearranged to accommodate \verb|list|s, but the core functionality is due to \verb|insbox|.
