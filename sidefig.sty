@@ -7,7 +7,7 @@
 
 \NeedsTeXFormat{LaTeX2e}[1994/06/01]
 
-\ProvidesPackage{sidefig}[2018/02/22 v0.2 For wrapping text around figures and other boxes placed to one side or the other. Designed to wrap around listed environments.]
+\ProvidesPackage{sidefig}[2018/03/19 v0.3rc For wrapping text around figures and other boxes placed to one side or the other. Designed to wrap around listed environments.]
 
 \RequirePackage{afterpage}
 
@@ -16,7 +16,11 @@
 \newif\if@sidefigdebug\@sidefigdebugfalse
 \def\@debug#1{\if@sidefigdebug\typeout{#1}\else\relax\fi}
 
-%%%%% BEGIN insbox internal code
+\def\@beginsidefigmark{0}
+\def\@endsidefigmark{1}
+
+
+%%%%% BEGIN insbox internal code, relatively unmodified
 
 \newdimen\@InsertBoxMargin
 \@InsertBoxMargin = 2mm
@@ -73,28 +77,34 @@
 \newcount\@numnormal    % number of leading lines to typeset normally
 \newdimen\@framewidth   % width of the frame
 \newdimen\@wherebottom  % position of frame's bottom
-\newdimen\@wheretop
 \newif\if@byframe       % true if we are just beside the frame
 \@byframefalse
-\newif\if@bottomout
-\@bottomoutfalse
-\newif\if@indented
-\@indentedtrue
 %
 
 %%%%% END insbox internal code
 
+%%% new sidefig definitions
+\newdimen\@wheretop
+\newdimen\@lastheight
+\newif\if@bottomout
+\@bottomoutfalse
+\newif\if@indented
+\@indentedtrue
+
 \let\@everypar\everypar % save to restore later
+
+\def\ps@sidefig{\@debug{in ps@sidefig}\local@restore@} %use this to protect headers and footers when sidefigs go across page break
+
 
 %%%%% code to be run at the beginning of each par (using everypar) to set the parshape.
 %%%%%   includes checks for being inside a list, and combines the parshapes appropriately.
 \def\@setupsidepar#1{%
-	\@debug{in @setupsidepar: pt \the\pagetotal, top \the\@wheretop, bottom \the\@wherebottom}%
-	\if@byframe
+	\@debug{in @setupsidepar: pt \the\pagetotal, top \the\@wheretop, bottom \the\@wherebottom, goal \the\pagegoal, th \the\textheight}%
+	\if@byframe%
     % are we already below the bottom of the box?
-	\ifdim \pagetotal < \@wheretop \@restore@ \else %if we are rendering a header after an overflowing sidefig, then restore
     \ifdim \pagetotal < \@wherebottom
       % no...
+	  \@debug{@setupsidepar working...}%
       \bgroup  % to keep some changes local
         % let's calculate parameters for \ParShape
         \dimen0 = \@wherebottom
@@ -119,28 +129,27 @@
       \egroup
     \else
 	% yes!
-	  \@restore@    % it's time to end everything
-    \fi  % @wherebottom
-	\fi % @wheretop
-	 \else \@restore@ \fi %if@byframe
+	  \@restore@    % it's time to end everything (...just for this sidefig)
+    \fi  % \end <@wherebottom
+	\else \@restore@ \fi %\end if@byframe
 }
 
 \def\@detectindent{
   \ifnum\@listdepth =0%
   \leavevmode\setbox0=\lastbox%
+  \par%go back to vmode for assembling the sidefig
   \@debug{checking lastbox, wd \the\wd0}%
   \ifdim\wd0 >0pt \global\@indentedtrue \else \global\@indentedfalse \fi%
   \else\@debug{not checking lastbox}%
-  \global\@indentedfalse
+  \global\@indentedfalse%
   \fi%
 }
 
 %%%%% rewritten \@@InsertBox from insbox to use our helper function
 %%%%%   defs \everypar to make sure that it still affects lists
 \def\@@InsertBox#1#2#3{%
-  \if@bottomout \clearpage \fi %a second box after a bottomed-out box should just break the page
+  % \if@bottomout \clearpage \fi %a second box after a bottomed-out box should just break the page. Or should it? Improved handling seems to negate some need for this...
   \global\@bottomoutfalse%
-  \MoveBelowBox%
   \global\@byframetrue%
   % \@wherebottom = \pagetotal + (\@numnormal * \baselineskip) +
   %                 (height of \@boxcontent) + (2 * \@InsertBoxMargin)
@@ -157,7 +166,7 @@
   \fi
   % add the correction
   \advance \dimen0 by #1\baselineskip
-  \ifnum \@listdepth >0
+  \ifnum \@listdepth >0 %%% calculating bottom around lists
   	\if@newlist
 		\advance\dimen0 by \partopsep
 		% \advance\dimen0 by \topsep % who even knows the right combination
@@ -165,13 +174,13 @@
 	\else
 		\advance\dimen0 by \itemsep
 	\fi
-	% \else
-		% \advance\dimen0 by \parskip
   \fi
   % \dimen1 = (width of \@boxcontent} + \@InsertboxMargin
   \dimen1 = \wd\@boxcontent
   \advance \dimen1 by \@InsertBoxMargin
   \global\@wherebottom=\dimen0
+  \advance\dimen0 by -\pagetotal
+  \global\@lastheight=\dimen0
   \global\@framewidth=\dimen1
   \global\@wheretop=\pagetotal
   \global\advance\@wheretop-\baselineskip %fudge - the typeset paragraph can often start a bit above the @wheretop due to stretchable glue
@@ -193,61 +202,80 @@
 	  \PackageWarning{sidefig}{This box will not fit on the page or may appear without word wrapping on the next page. Try inserting a page break before this box.}
       % ... and mark this place in document with a black box
       % \vrule width \overfullrule%
-	  \global\@wherebottom\dimen0 % prevent the current parshape running over into the next page
+	  % \global\@wherebottom\dimen0 % prevent the current parshape running over into the next page
 	  % \global\advance\@wherebottom-\baselineskip
-	  \global\@bottomouttrue\afterpage{\@restore@\global\@bottomoutfalse}% prevent cutout from affecting new pars next page
+	  \global\@bottomouttrue
+	  \global\@specialpagetrue
+	  \gdef\@specialstyle{sidefig}
+	  \afterpage{\@debug{afterpage trigger: tm \topmarks1 bm \botmarks1 fm \firstmarks1 ?= \@endsidefigmark}\if{\topmarks1}\@endsidefigmark\@debug{restoring after endsidefig...}\@restore@\else\@debug{trying to compensate...}\global\advance\@wherebottom-\textheight\global\@wheretop 0pt\@setupsidepar{#2}\fi\global\@bottomoutfalse}% prevent cutout from affecting new pars next page
+	  \marks1{\@beginsidefigmark}%
+	  \vbox to 0pt{~}
+	  \pagebreak[2] % allow but not require latex to break the page here
     \fi
   \egroup
-  \prevgraf = 0
+  % \prevgraf = 0
+	%   \ifnum \@listdepth >0
+	%   	\if@newlist\else
+	% 	% \hskip -\@totalleftmargin
+	% \fi
+	%   \fi
+  \dimen0=\ht\@boxcontent
+  \advance\dimen0 by \@InsertBoxMargin
+  \dimen1=0pt
   \ifnum \@listdepth >0
-  	\if@newlist\else
-		\hskip -\@totalleftmargin
-	\fi
-  \fi
-  % insert the box in the left (if #2 = 0) or in the right (if #2 = 1)
-  \vbox to 0cm{%
-    \dimen0 = \baselineskip
-    \multiply \dimen0 by \@numnormal
-    \advance \dimen0 by -\baselineskip
-    % \setbox0 = \hbox{y}%
-	% \vskip \dp0
-    \vskip \dimen0
-     \vskip \@InsertBoxMargin
-    \ifnum \@listdepth >0
     	\if@newlist\@debug{newlist: \the\partopsep \the\topsep \the\parskip \the\@outerparskip}
-	  		\vglue \partopsep
-			\vglue \@outerparskip
-	  	\else
-	  		\vglue \itemsep
-	  	\fi
-		% \else
-			% \vskip \parskip
+    		% \advance\dimen1 \topsep
+			\advance\dimen1 \itemsep
+	  		\advance\dimen1 \@outerparskip
+    	\else
+    		\advance\dimen1 \itemsep
+    	\fi
+  	% \else
+  		% \advance\dimen1 \parskip
     \fi
-	\ifnum #2 = 1
-      \vtop{\noindent \hbox to \hsize{\hss \box\@boxcontent}}%
-    \else
+	\advance\dimen0\dimen1
+  % insert the box in the left (if #2 = 0) or in the right (if #2 = 1)
+  % \rule{5em}{1pt}
+  \vbox to \dimen0{%
+  	\vglue\dimen1%
+    % \dimen0 = \baselineskip%
+%     \multiply \dimen0 by \@numnormal
+%     \advance \dimen0 by -\baselineskip
+%% \setbox0 = \hbox{y}%
+	% \vskip \dp0
+    % \vskip \dimen0
+     \vskip \@InsertBoxMargin%
+	\ifnum #2 = 1%
+      \hbox to \hsize{\hss \box\@boxcontent}%
+    \else%
 	  % \ifnum \@listdepth >0
 % 	  \vtop{\noindent \hskip -\@totalleftmargin \box\@boxcontent}
 % 	  \else
-      \vtop{\noindent \box\@boxcontent}%
+      \hbox{\box\@boxcontent}%
 	  % \fi
-    \fi
-    \vss
+    \fi%
+    \vss%
   }%
+  \if@bottomout\marks1{\@endsidefigmark}\fi%
+  \@debug{the dimen0 = \the\dimen0}%
+  \nobreak\vglue -\dimen0%
   % I have no idea why, but this is really necessary
-  \vglue -\parskip
-  \vskip -\baselineskip
-  \ifnum \@listdepth >0 %\if@newlist
-		 % 	   	 \vglue -\partopsep
-		 % \vglue -\topsep
-		 % \vglue 0pt
-  % \else
-	 \vglue -\itemsep
-  \fi %\fi
+  % \vglue -\parskip
+  % \vskip -\baselineskip
+  % \vskip 0pt
+  \ifnum \@listdepth >0 \if@newlist
+  % 		 	   	 \vglue -\partopsep
+  		 % \vglue -\@outerparskip
+  %		 \vglue 0pt
+  \fi
+  \else
+  	 \vglue -\parskip
+  \fi
+  \vskip 0pt
 %% each following paragraph needs to be formatted properly
   \gdef\everypar##1{\@everypar{##1\@setupsidepar{#2}}} %%%% this is the magic that keeps the parshape
   % \ifnum \@listdepth =0
-  \if@indented\everypar{}\else\everypar{\hskip -\parindent\everypar{}}\fi
+  \if@indented\everypar{\@debug{par}}\else\everypar{\@debug{unindent par}\hskip -\parindent\everypar{}}\fi
   % \if@bottomout\global\@byframefalse\fi
   % \else
   	 % \everypar{}
@@ -282,8 +310,22 @@
 	\fi
 }
 
+\def\local@restore@{%
+	\@debug{in local@restore@}%
+    \@wherebottom = 0cm
+    % \@byframefalse
+	\let\everypar\@everypar % restore the old everypar command
+    \everypar = {}%
+    % \global\let \par = \endgraf %again, can't use with lists
+	\ifnum \@listdepth >0
+	\parshape = 1 \@totalleftmargin \linewidth % fix up the margins if we're in a list
+	\else
+    \parshape = 1 0cm \hsize
+	\fi
+}
+
 \let\@origitem\item
-\def\item{\if@byframe\else\@restore@\fi\@origitem} % if a nested list ends at the same time as the bottom of a box, it will hve the wrong indent. so tidy things up (this is probably overkill)
+\def\item{\@debug{item}\if@byframe\else\@restore@\fi\@origitem} % if a nested list ends at the same time as the bottom of a box, it will hve the wrong indent. so tidy things up (this is probably overkill)
 
 % \def\InsertBoxC#1{% doesn't interact well with lists
 %   \leavevmode
@@ -328,14 +370,14 @@
 
 \def\MoveBelowBox{%
   % \par%
-  \if@byframe
-    \global\advance \@wherebottom by -\pagetotal
-	\ifdim \@wherebottom > 0cm
-      \vskip \@wherebottom
-    \fi
-    \@restore@
-  \fi
-  \par % move par to end so that it uses the restored parshape and sets new pagetotal
+  \if@byframe%
+    \global\advance \@wherebottom by -\pagetotal%
+	\ifdim \@wherebottom > 0cm%
+      \vskip \@wherebottom%
+    \fi%
+    \@restore@%
+  \fi%
+  \par% move par to end so that it uses the restored parshape and sets new pagetotal
 }%
 
 \newsavebox\@figbox
@@ -344,14 +386,13 @@
 
 \def\@sidefig#1#2{\csname @InsertBox#1\endcsname{#2}\ignorespaces}
 \def\@sidefigcaption[#1]#2#3{%
-\MoveBelowBox
 \savebox{\@figbox}{\hbox{#3}}\@debug{figbox ht \the\ht\@figbox, wd \the\wd\@figbox}%
 \savebox{\@capbox}{\hbox{\vbox{\hsize=\wd\@figbox \noindent\parshape 1 0pt \wd\@figbox {\sidecapstyle{#1}\par}}}}\@debug{capbox ht \the\ht\@capbox, wd \the\wd\@capbox}%
-\global\savebox{\@bothbox}{\vbox{\hsize=\wd\@figbox\noindent\usebox{\@figbox} \vskip \sidecapskip \noindent\usebox{\@capbox}}}\@debug{tmpbox ht \the\ht\@bothbox, wd \the\wd\@bothbox}%
+\global\savebox{\@bothbox}{\vbox{\parskip 0pt\hsize=\wd\@figbox\noindent\usebox{\@figbox} \vskip \sidecapskip \noindent\usebox{\@capbox}}}\@debug{tmpbox ht \the\ht\@bothbox, wd \the\wd\@bothbox}%
 %
 \@sidefig{#2}{\usebox{\@bothbox}}%
 }
-\def\sidefig{\@detectindent\@ifnextchar[{\@sidefigcaption}{\@sidefig}}
+\def\sidefig{\MoveBelowBox\@detectindent\@ifnextchar[{\@sidefigcaption}{\@sidefig}}
 
 \def\sidecapstyle{\centering\small\it}
 \newlength{\sidecapskip}
