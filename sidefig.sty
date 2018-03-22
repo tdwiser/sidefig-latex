@@ -91,6 +91,9 @@
 \newif\if@indented
 \@indentedtrue
 
+\newif\if@itemnext
+\@itemnextfalse
+
 \let\@everypar\everypar % save to restore later
 
 \def\ps@sidefig{\@debug{in ps@sidefig}\local@restore@} %use this to protect headers and footers when sidefigs go across page break
@@ -166,7 +169,7 @@
   \fi
   % add the correction
   \advance \dimen0 by #1\baselineskip
-  \ifnum \@listdepth >0 %%% calculating bottom around lists
+  \ifnum \@listdepth >0 \if@itemnext%%% calculating bottom around lists
   	\if@newlist
 		\advance\dimen0 \@topsep
 		% \advance\dimen0 by \topsep % who even knows the right combination
@@ -174,7 +177,7 @@
 	\else
 		\advance\dimen0 by \itemsep
 	\fi
-  \fi
+  \fi\fi
   % \dimen1 = (width of \@boxcontent} + \@InsertboxMargin
   \dimen1 = \wd\@boxcontent
   \advance \dimen1 by \@InsertBoxMargin
@@ -222,7 +225,7 @@
   \dimen0=\ht\@boxcontent
   \advance\dimen0 by \@InsertBoxMargin
   \dimen1=0pt
-  \ifnum \@listdepth >0
+  \ifnum \@listdepth >0 \if@itemnext
     	\if@newlist\@debug{newlist: \the\partopsep \the\topsep \the\parskip \the\@outerparskip}
     		\advance\dimen1 \@topsep
 	  		\advance\dimen1 \@outerparskip
@@ -231,7 +234,7 @@
     	\fi
   	% \else
   		% \advance\dimen1 \parskip
-    \fi
+    \fi\fi
 	\advance\dimen0\dimen1
   % insert the box in the left (if #2 = 0) or in the right (if #2 = 1)
   % \rule{5em}{1pt}
@@ -382,8 +385,9 @@
 \newsavebox\@figbox
 \newsavebox\@capbox
 \newsavebox\@bothbox
-
-\def\@sidefig#1#2{\csname @InsertBox#1\endcsname{#2}\ignorespaces}
+%\csname @InsertBox#1\endcsname{#2}
+\def\@@sidefig{\ifx\@nexttoken\item\@debug{before an item}\@itemnexttrue\else\@debug{not before an item}\@itemnextfalse\fi\csname @InsertBox\@pa\endcsname{\@pb}\@nexttoken}
+\def\@sidefig#1#2{\def\@pa{#1}\def\@pb{#2}\afterassignment\@@sidefig\let\@nexttoken}
 \def\@sidefigcaption[#1]#2#3{%
 \savebox{\@figbox}{\hbox{#3}}\@debug{figbox ht \the\ht\@figbox, wd \the\wd\@figbox}%
 \savebox{\@capbox}{\hbox{\vbox{\hsize=\wd\@figbox \noindent\parshape 1 0pt \wd\@figbox {\sidecapstyle{#1}\par}}}}\@debug{capbox ht \the\ht\@capbox, wd \the\wd\@capbox}%
