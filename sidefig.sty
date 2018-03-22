@@ -168,7 +168,7 @@
   \advance \dimen0 by #1\baselineskip
   \ifnum \@listdepth >0 %%% calculating bottom around lists
   	\if@newlist
-		\advance\dimen0 by \partopsep
+		\advance\dimen0 \@topsep
 		% \advance\dimen0 by \topsep % who even knows the right combination
 		\advance\dimen0 by \@outerparskip % thanks to random trial and error
 	\else
@@ -224,8 +224,7 @@
   \dimen1=0pt
   \ifnum \@listdepth >0
     	\if@newlist\@debug{newlist: \the\partopsep \the\topsep \the\parskip \the\@outerparskip}
-    		% \advance\dimen1 \topsep
-			\advance\dimen1 \itemsep
+    		\advance\dimen1 \@topsep
 	  		\advance\dimen1 \@outerparskip
     	\else
     		\advance\dimen1 \itemsep
