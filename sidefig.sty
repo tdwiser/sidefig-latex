@@ -141,7 +141,7 @@
   \@debug{checking lastbox, wd \the\wd0}%
   \ifdim\wd0 >0pt \global\@indentedtrue \else \global\@indentedfalse \fi%
   \else\@debug{not checking lastbox}%
-  \global\@indentedfalse%
+  \global\@indentedtrue%
   \fi%
 }
 
@@ -168,9 +168,15 @@
   \advance \dimen0 by #1\baselineskip
   \ifnum \@listdepth >0 %%% calculating bottom around lists
   	\if@newlist
+		\if@nobreak
+		\advance\dimen0 by \@outerparskip 
+		\dimen2\lastskip
+		\advance\dimen0 by -\dimen2
+		\else
 		\advance\dimen0 \@topsep
+		\fi
 		% \advance\dimen0 by \topsep % who even knows the right combination
-		\advance\dimen0 by \@outerparskip % thanks to random trial and error
+		% \advance\dimen0 by \@outerparskip % thanks to random trial and error
 	\else
 		\advance\dimen0 by \itemsep
 	\fi
@@ -223,9 +229,17 @@
   \advance\dimen0 by \@InsertBoxMargin
   \dimen1=0pt
   \ifnum \@listdepth >0
-    	\if@newlist\@debug{newlist: \the\partopsep \the\topsep \the\parskip \the\@outerparskip}
-    		\advance\dimen1 \@topsep
-	  		\advance\dimen1 \@outerparskip
+    	\if@newlist\@debug{newlist: \the\partopsep \the\topsep \the\parskip \the\@outerparskip}%
+    		\if@nobreak
+			\advance\dimen1 \@outerparskip			%
+			% \advance\dimen1 -\parskip
+			% \advance\dimen1 \@topsep
+			\dimen2\lastskip
+			\advance\dimen1 -\dimen2
+\else
+			\advance\dimen1 \@topsep
+			% \advance\dimen1 \@outerparskip
+			\fi
     	\else
     		\advance\dimen1 \itemsep
     	\fi
@@ -236,7 +250,7 @@
   % insert the box in the left (if #2 = 0) or in the right (if #2 = 1)
   % \rule{5em}{1pt}
   \vbox to \dimen0{%
-  	\vglue\dimen1%
+    \vglue\dimen1%
     % \dimen0 = \baselineskip%
 %     \multiply \dimen0 by \@numnormal
 %     \advance \dimen0 by -\baselineskip
@@ -262,14 +276,19 @@
   % \vglue -\parskip
   % \vskip -\baselineskip
   % \vskip 0pt
-  \ifnum \@listdepth >0 \if@newlist
+  \ifnum \@listdepth >0 \if@newlist \if@nobreak 
+  			\vglue -\dimen2
+			\vglue \parskip
+			\else
   % 		 	   	 \vglue -\partopsep
-  		 % \vglue -\@outerparskip
+	  		 \vglue \parskip
   %		 \vglue 0pt
-  \fi
-  \else
+  	% \else \vglue -\parskip
+  \fi\fi\fi
+% \else
   	 \vglue -\parskip
-  \fi
+  % \fi
+  \vskip 0pt
   \vskip 0pt
 %% each following paragraph needs to be formatted properly
   \gdef\everypar##1{\@everypar{##1\@setupsidepar{#2}}} %%%% this is the magic that keeps the parshape
