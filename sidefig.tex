@@ -87,7 +87,9 @@
 		Version rc0.3 improves the behavior somewhat, and the package will attempt to recover across a page break.
 		Sometimes this leads to some bad behavior if there are multiple paragraphs next to a \verb|\sidefig|; the first and second will appear on different pages, but the second will still have a cutout for the figure which fell on the previous page.
 
-		\item The spacing calculations are still not quite right around lists, but qualify as `good enough' for typical settings.
+		\item There should NOT be a blank line between \verb|\sidefig| and the next paragraph or (especially) \verb|\item|.
+		In order to make the positioning right within lists, \verb|sidefig| has to look ahead at the next command, which does not work across a blank line.
+		
 	\end{itemize}
 	
 	\subsection*{Acknowledgements}
