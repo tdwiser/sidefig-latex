@@ -1,14 +1,10 @@
 \documentclass{article}
-% \usepackage{lua-visual-debug}
-% \usepackage{physhandout}
 
 \usepackage{sidefig}
 
 \usepackage{url}
-% \setlength{\parskip}{18ex}
 
 \begin{document}
-	
 	\title{\texttt{sidefig} Package Example}
 	\author{Tim Wiser}
 	\date{\today}
@@ -17,9 +13,8 @@
 
 	\newsavebox\samplebox
 	\savebox{\samplebox}{\fbox{\vbox{\vskip 4ex \hbox{\hskip 8ex \it figure \hskip 8ex} \vskip 4ex}}}
-			
-	\sidefig{L}{\usebox{\samplebox}}
 	
+	\sidefig{L}{\usebox{\samplebox}}
 	Wrapping text around a figure (or, more generally, any box-shaped region) is a tricky subject in \LaTeX.
 	Plain \TeX\ has a powerful command, \verb|\parshape|, which directs \TeX\ to flow a paragraph within a defined region, with the geometry defined line-by-line.
 	
@@ -45,7 +40,6 @@
 			\item like so.
 
 			\sidefig{L}{\usebox{\samplebox}}
-			
 			\item If you add a \verb|\sidefig| in a list, the package tries hard to make things look right even across multiple levels.
 		\end{enumerate}
 		
@@ -59,12 +53,11 @@
 		\verb|\sidefig[|\emph{(caption)}\verb|]{L|\emph{ or }\verb|R}{|\emph{(content)}\verb|}| right before any paragraph or \verb|\item|.
 	\end{itemize}
 	
-	\pagebreak %%% this is necessary to appease the coming sidefig, which would otherwise be typeset across a page boundary
-	
-	\renewcommand{\sidecapstyle}[1]{\uppercase{#1}}
+	% \pagebreak %%% this is necessary to appease the coming sidefig, which would otherwise be typeset across a page boundary
 	
 	\section*{Additional Features}
 
+	\renewcommand{\sidecapstyle}[1]{\uppercase{#1}}
 	\sidefig[Caption with redefined style]{R}{\usebox{\samplebox}}
 	The style of the caption can be controlled by redefining \verb|\sidecapstyle|.
 	The default is
@@ -89,14 +82,14 @@
 	\subsection*{Known Issues}
 	
 	\begin{itemize}
-		\item Various issues around page breaks.
-		Current behavior is to raise an error if the sidefig would go below the ostensible end of the page.
-		If the box overflows by just a little, \TeX\ may put it there anyway, and everything is fine (despite the error); if it instead moves the box to the next page, the word wrap fails.
-		Since the behavior is unpredictable, an error is raised.
+		\item Various issues around page breaks, since \TeX\ works ahead while building pages, deciding the breaks later.
+		Current behavior is to raise a warning if the sidefig would go below the ostensible end of the page.
+		Version rc0.3 improves the behavior somewhat, and the package will attempt to recover across a page break.
+		Sometimes this leads to some bad behavior if there are multiple paragraphs next to a \verb|\sidefig|; the first and second will appear on different pages, but the second will still have a cutout for the figure which fell on the previous page.
+
+		\item There should NOT be a blank line between \verb|\sidefig| and the next paragraph or (especially) \verb|\item|.
+		In order to make the positioning right within lists, \verb|sidefig| has to look ahead at the next command, which does not work across a blank line.
 		
-		This needs to be made much more robust.
-		
-		\item There also seems to be some mysterious errors involving page breaks, lists, and \verb|\prevdepth|, but they sometimes vanish after solving the page overflow issue.
 	\end{itemize}
 	
 	\subsection*{Acknowledgements}
